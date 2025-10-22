@@ -3,7 +3,8 @@ export interface Credential {
   apiKey: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const rawBase = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+const API_BASE = rawBase.endsWith("/") ? rawBase.slice(0, -1) : rawBase;
 
 export async function getRegistry() {
   const response = await fetch(`${API_BASE}/tools/registry`, { cache: "no-store" });
