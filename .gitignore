@@ -1,0 +1,16 @@
+# Node
+frontend/node_modules
+frontend/.next
+frontend/dist
+frontend/.turbo
+
+# Python
+backend/.venv
+backend/__pycache__
+backend/*.pyc
+backend/cache/
+
+# General
+.env
+*.log
+.DS_Store
