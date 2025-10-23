@@ -5,6 +5,7 @@ import {
   inferExpiryFromDate,
   inferToolArguments,
   metricRequiresExpiry,
+  type ComputeMetricResponse,
   type MetricKey,
 } from "./mock-backend";
 
@@ -17,7 +18,9 @@ function isMetricKey(value: string): value is MetricKey {
   return Object.prototype.hasOwnProperty.call(METRIC_REGISTRY, value);
 }
 
-export async function getRegistry() {
+export type RegistryPayload = ReturnType<typeof getRegistryPayload>;
+
+export async function getRegistry(): Promise<RegistryPayload> {
   return getRegistryPayload();
 }
 
@@ -28,7 +31,12 @@ export interface ComputeMetricBody {
   as_of?: string;
 }
 
-export async function postComputeMetric(body: ComputeMetricBody, credentials?: Credential[]) {
+export type ComputeMetricPayload = ComputeMetricBody & { credentials?: Credential[] };
+
+export async function postComputeMetric(
+  body: ComputeMetricBody,
+  credentials?: Credential[],
+): Promise<ComputeMetricResponse> {
   const payload = {
     ...body,
     credentials: credentials ?? readCredentials(),
@@ -36,7 +44,13 @@ export async function postComputeMetric(body: ComputeMetricBody, credentials?: C
   return computeFromMock(payload);
 }
 
-export async function postAskLLM(question: string, credentials?: Credential[]) {
+export interface AskLLMResponse {
+  ok: true;
+  tool_args: ComputeMetricPayload;
+  result_from_tool: ComputeMetricResponse;
+}
+
+export async function postAskLLM(question: string, credentials?: Credential[]): Promise<AskLLMResponse> {
   const payload = {
     question,
     credentials: credentials ?? readCredentials(),
@@ -44,25 +58,26 @@ export async function postAskLLM(question: string, credentials?: Credential[]) {
   return askMockLLM(payload);
 }
 
-function computeFromMock(payload: ComputeMetricBody & { credentials?: Credential[] }) {
+function computeFromMock(payload: ComputeMetricPayload): ComputeMetricResponse {
   const metric = payload.metric;
   const ticker = payload.ticker;
   if (!metric || !ticker || !isMetricKey(metric)) {
     throw new Error("Metric request failed and mock fallback was unavailable.");
   }
   let resolvedExpiry = payload.expiry;
-  if (metricRequiresExpiry(metric) && !resolvedExpiry) {
+  const metricKey = metric as MetricKey;
+  if (metricRequiresExpiry(metricKey) && !resolvedExpiry) {
     resolvedExpiry = inferExpiryFromDate(new Date());
   }
   return computeMetricMock({
-    metric,
+    metric: metricKey,
     ticker,
     expiry: resolvedExpiry,
     as_of: payload.as_of,
   });
 }
 
-function askMockLLM(payload: { question: string; credentials?: Credential[] }) {
+function askMockLLM(payload: { question: string; credentials?: Credential[] }): AskLLMResponse {
   const inferred = inferToolArguments(payload.question ?? "");
   let { metric, ticker, expiry } = inferred;
   ticker = ticker || "SPY";
@@ -76,7 +91,7 @@ function askMockLLM(payload: { question: string; credentials?: Credential[] }) {
     expiry,
     as_of: asOf,
   });
-  const toolArgs: Record<string, unknown> = {
+  const toolArgs: ComputeMetricPayload = {
     metric,
     ticker,
     ...(expiry ? { expiry } : {}),
