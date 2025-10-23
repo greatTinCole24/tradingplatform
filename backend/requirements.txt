@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+httpx
+python-dotenv
+pandas
+duckdb
+openai>=1.40.0
