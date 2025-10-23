@@ -1,3 +1,5 @@
+// Central catalogue of the metrics the mock analytics layer understands. The
+// descriptions are reused in the UI tooltips/preset buttons.
 export const METRIC_REGISTRY = {
   gex: { desc: "Net gamma exposure (per expiry)" },
   iv_snapshot: { desc: "Implied vol snapshot" },
@@ -23,14 +25,19 @@ export interface ComputeMetricResponse {
   summary: string;
 }
 
+// Shape the registry into the same structure the real backend will expose.
 export function getRegistryPayload() {
   return { metrics: METRIC_REGISTRY };
 }
 
+// Some metrics (gamma, IV) are tied to a specific expiration cycle. This
+// helper keeps the logic centralized so the UI and mock LLM share it.
 export function metricRequiresExpiry(metric: MetricKey): boolean {
   return metric === "gex" || metric === "iv_snapshot";
 }
 
+// When an expiry is missing we synthesize "next Friday" as a reasonable
+// default. This matches the behaviour we expect from the eventual backend.
 export function inferExpiryFromDate(baseDate: Date): string {
   const date = new Date(baseDate);
   const weekday = date.getUTCDay();
@@ -47,6 +54,8 @@ function buildStrikeSeries() {
   return Array.from({ length: 11 }, (_, index) => 50 + index * 10);
 }
 
+// Generate a simple curve where gamma increases with strike. It provides both
+// tabular data and a bar chart spec so the UI can demonstrate both views.
 function computeGex(ticker: string) {
   const strikes = buildStrikeSeries();
   const base = ticker.toUpperCase().startsWith("G") ? 1.2 : 1.0;
@@ -78,6 +87,8 @@ function computeGex(ticker: string) {
   };
 }
 
+// Produce an implied volatility smile around ATM strikes. The numbers are
+// deterministic so screenshots stay stable across runs.
 function computeIvSnapshot(ticker: string) {
   const strikes = buildStrikeSeries();
   const ivValues = strikes.map((strike) => formatNumber(0.2 + 0.05 * Math.abs((100 - strike) / 100), 4));
@@ -110,6 +121,7 @@ function computeIvSnapshot(ticker: string) {
   };
 }
 
+// Minimal options volume vs open-interest snapshot used by the presets.
 function computeVolumeOi(ticker: string) {
   const callVolume = 12543;
   const putVolume = 8342;
@@ -137,6 +149,8 @@ function computeVolumeOi(ticker: string) {
   };
 }
 
+// Trend view keeps things simple: mock moving averages and a qualitative
+// direction for quick narration.
 function computeTrend(ticker: string) {
   const days = 30;
   const prices = Array.from({ length: days }, (_, index) => formatNumber(120 + Math.sin(index / 5) * 4 + index * 0.2, 2));
@@ -156,6 +170,8 @@ function computeTrend(ticker: string) {
   };
 }
 
+// Intraday VWAP example with a handful of scalar values — great for showing
+// that not every tool needs to return a chart.
 function computeVwap(ticker: string) {
   const lastPrice = formatNumber(118.42, 2);
   const vwap = formatNumber(117.93, 2);
@@ -171,6 +187,9 @@ function computeVwap(ticker: string) {
   };
 }
 
+// Single entry point that mirrors the real `/tools/compute_metric` endpoint.
+// The UI only talks to this function, so swapping in network calls later is
+// trivial.
 export function computeMetricMock(params: ComputeMetricParams): ComputeMetricResponse {
   const { metric, ticker, expiry } = params;
   const asOfDate = params.as_of ? new Date(params.as_of) : new Date();
@@ -213,6 +232,9 @@ export function computeMetricMock(params: ComputeMetricParams): ComputeMetricRes
   };
 }
 
+// Extremely lightweight natural-language router. We only look for ticker
+// symbols, ISO-formatted expiries, and key metric words so the behaviour is
+// predictable for demos.
 export function inferToolArguments(question: string) {
   const normalized = question.toLowerCase();
   let metric: MetricKey = "gex";

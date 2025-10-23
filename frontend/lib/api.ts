@@ -20,6 +20,9 @@ function isMetricKey(value: string): value is MetricKey {
 
 export type RegistryPayload = ReturnType<typeof getRegistryPayload>;
 
+// In the MVP we skip the network call entirely and expose the registry data
+// straight from the mock module. Keeping the API surface async makes it easy
+// to swap back to `fetch` later.
 export async function getRegistry(): Promise<RegistryPayload> {
   return getRegistryPayload();
 }
@@ -33,6 +36,9 @@ export interface ComputeMetricBody {
 
 export type ComputeMetricPayload = ComputeMetricBody & { credentials?: Credential[] };
 
+// Mirrors the shape of the real `/tools/compute_metric` endpoint. Right now we
+// only call into the mock implementation but the surrounding code doesn't need
+// to change once a backend exists.
 export async function postComputeMetric(
   body: ComputeMetricBody,
   credentials?: Credential[],
@@ -50,6 +56,8 @@ export interface AskLLMResponse {
   result_from_tool: ComputeMetricResponse;
 }
 
+// Prototype version of `/llm/ask`. The mock "LLM" simply pattern-matches on
+// the user's question and calls the compute helper directly.
 export async function postAskLLM(question: string, credentials?: Credential[]): Promise<AskLLMResponse> {
   const payload = {
     question,
@@ -58,6 +66,9 @@ export async function postAskLLM(question: string, credentials?: Credential[]): 
   return askMockLLM(payload);
 }
 
+// Shared helper between direct metric calls and the mock LLM path. Handles the
+// small bits of validation (metric exists, expiry inference, etc.) before
+// delegating to `computeMetricMock`.
 function computeFromMock(payload: ComputeMetricPayload): ComputeMetricResponse {
   const metric = payload.metric;
   const ticker = payload.ticker;
@@ -77,6 +88,8 @@ function computeFromMock(payload: ComputeMetricPayload): ComputeMetricResponse {
   });
 }
 
+// Deterministic "LLM" stub. Keeping the inference here lets you replace it
+// with a real OpenAI call later without touching the UI.
 function askMockLLM(payload: { question: string; credentials?: Credential[] }): AskLLMResponse {
   const inferred = inferToolArguments(payload.question ?? "");
   let { metric, ticker, expiry } = inferred;
@@ -107,6 +120,8 @@ function askMockLLM(payload: { question: string; credentials?: Credential[] }): 
   };
 }
 
+// Credentials live entirely in localStorage for the mock. We expose a helper
+// so components do not duplicate JSON parsing/guard logic.
 export function readCredentials(): Credential[] {
   if (typeof window === "undefined") {
     return [];

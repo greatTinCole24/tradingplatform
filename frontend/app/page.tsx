@@ -12,6 +12,7 @@ import {
 import { postAskLLM, postComputeMetric, type ComputeMetricPayload } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+// Example prompts that appear as quick-fill buttons for fast demos.
 const EXAMPLES = [
   "Build me a dashboard for net gamma on GOOGL for the nearest expiry as of now.",
   "Show implied volatility snapshot for TSLA 2025-10-24.",
@@ -25,6 +26,7 @@ type ChatMessage = {
   detail?: string;
 };
 
+// Seed the conversation with a greeting so the chat area is never empty.
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     role: "assistant",
@@ -33,6 +35,8 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+// Turn the raw tool arguments into a short, human readable string that
+// we can show beneath each assistant bubble (e.g., "Metric: gex • Ticker: SPY").
 function formatToolDetail(result: ComputeMetricResponse | null, toolArgs: ComputeMetricPayload | null) {
   if (!result || !toolArgs) return undefined;
   const pieces: string[] = [];
@@ -50,6 +54,9 @@ function formatToolDetail(result: ComputeMetricResponse | null, toolArgs: Comput
   return pieces.join(" \u2022 ");
 }
 
+// Render the structured payload area to the right of the chat pane. When the
+// mock analytics returns tabular `rows` data we build a small table, otherwise
+// we fall back to dumping the JSON payload so the structure is transparent.
 function renderPayload(result: ComputeMetricResponse | null) {
   if (!result) {
     return (
@@ -98,14 +105,24 @@ function renderPayload(result: ComputeMetricResponse | null) {
 }
 
 export default function HomePage() {
+  // All chat bubbles in the transcript. Starts with `INITIAL_MESSAGES` above
+  // and grows every time the user submits a question or clicks a preset.
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  // What the user is currently typing into the textarea.
   const [input, setInput] = useState(EXAMPLES[0]);
+  // The latest structured analytics payload returned by the mock backend.
   const [result, setResult] = useState<ComputeMetricResponse | null>(null);
+  // Simple UI state toggles.
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Memoize the ECharts option so we only re-render the chart when the
+  // payload actually changes.
   const chartOption = useMemo(() => result?.chart_spec ?? null, [result]);
 
+  // Submit the free-form chat prompt. The helper automatically infers a metric,
+  // runs the mock tool, and then we append both the user and assistant messages
+  // to the transcript.
   const handleSubmit = async () => {
     const question = input.trim();
     if (!question) return;
@@ -143,6 +160,8 @@ export default function HomePage() {
     }
   };
 
+  // When the user clicks a preset metric button we bypass the LLM inference
+  // and call the metric mock directly so the turnaround is instant.
   const runQuickMetric = async (metric: string) => {
     setIsLoading(true);
     setError(null);
@@ -174,6 +193,7 @@ export default function HomePage() {
         </p>
       </header>
 
+      {/* Quick examples that populate the textarea when clicked. */}
       <section className="flex flex-wrap items-center justify-center gap-2">
         {EXAMPLES.map((example) => (
           <Button
@@ -188,6 +208,7 @@ export default function HomePage() {
         ))}
       </section>
 
+      {/* Two-column layout: chat on the left, visualization/output/presets on the right. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         <Card className="border border-border/60 bg-black/40">
           <CardHeader>

@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 
+// Lazily import ECharts on the client so the component works with Next.js
+// streaming/SSR. The chart only renders once the browser bundle is ready.
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 interface ChartRendererProps {
@@ -10,6 +12,8 @@ interface ChartRendererProps {
 }
 
 export function ChartRenderer({ option }: ChartRendererProps) {
+  // We memoize the option to prevent unnecessary rerenders when the parent
+  // component updates unrelated state (e.g., adding chat messages).
   const chartOption = useMemo(() => option ?? null, [option]);
 
   if (!chartOption) {
