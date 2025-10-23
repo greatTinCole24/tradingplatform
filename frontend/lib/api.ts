@@ -13,32 +13,12 @@ export interface Credential {
   apiKey: string;
 }
 
-const rawBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
-const API_BASE =
-  rawBase && rawBase.length > 0 ? (rawBase.endsWith("/") ? rawBase.slice(0, -1) : rawBase) : undefined;
-
 function isMetricKey(value: string): value is MetricKey {
   return Object.prototype.hasOwnProperty.call(METRIC_REGISTRY, value);
 }
 
-function logFallback(context: string, error: unknown) {
-  console.warn(`[api] Falling back to mock ${context}:`, error);
-}
-
 export async function getRegistry() {
-  if (!API_BASE) {
-    return getRegistryPayload();
-  }
-  try {
-    const response = await fetch(`${API_BASE}/tools/registry`, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Failed to load registry: ${response.status} ${response.statusText}`);
-    }
-    return (await response.json()) as { metrics: Record<string, { desc: string }> };
-  } catch (error) {
-    logFallback("registry", error);
-    return getRegistryPayload();
-  }
+  return getRegistryPayload();
 }
 
 export interface ComputeMetricBody {
@@ -53,26 +33,7 @@ export async function postComputeMetric(body: ComputeMetricBody, credentials?: C
     ...body,
     credentials: credentials ?? readCredentials(),
   };
-  if (!API_BASE) {
-    return computeFromMock(payload);
-  }
-  try {
-    const response = await fetch(`${API_BASE}/tools/compute_metric`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Metric request failed: ${response.status} ${detail}`);
-    }
-    return response.json();
-  } catch (error) {
-    logFallback("metric", error);
-    return computeFromMock(payload);
-  }
+  return computeFromMock(payload);
 }
 
 export async function postAskLLM(question: string, credentials?: Credential[]) {
@@ -80,24 +41,7 @@ export async function postAskLLM(question: string, credentials?: Credential[]) {
     question,
     credentials: credentials ?? readCredentials(),
   };
-  if (!API_BASE) {
-    return askMockLLM(payload);
-  }
-  try {
-    const response = await fetch(`${API_BASE}/llm/ask`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`LLM request failed: ${response.status} ${detail}`);
-    }
-    return response.json();
-  } catch (error) {
-    logFallback("LLM", error);
-    return askMockLLM(payload);
-  }
+  return askMockLLM(payload);
 }
 
 function computeFromMock(payload: ComputeMetricBody & { credentials?: Credential[] }) {

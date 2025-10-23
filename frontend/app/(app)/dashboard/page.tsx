@@ -114,8 +114,8 @@ export default function DashboardPage() {
         <p className="text-sm uppercase tracking-[0.4em] text-primary">Dashboard</p>
         <h1 className="text-3xl font-semibold">Ask a question or run a tool directly.</h1>
         <p className="max-w-4xl text-sm text-muted-foreground">
-          Metrics run against the built-in mock API (or a configured backend via <code>NEXT_PUBLIC_API_BASE</code>). Credentials are
-          automatically attached from your browser storage.
+          Metrics run against the built-in mock analytics helpers. Credentials are automatically attached from your browser storage
+          so you can mirror real usage later.
         </p>
       </div>
 
