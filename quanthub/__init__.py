@@ -1,0 +1,1 @@
+"""QuantHub demo package."""

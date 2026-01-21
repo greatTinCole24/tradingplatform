@@ -1,11 +1,11 @@
 [theme]
-primaryColor="#3b82f6"
-backgroundColor="#ffffff"
-secondaryBackgroundColor="#f0f2f6"
-textColor="#262730"
-font="sans serif"
+base = "dark"
+primaryColor = "#7C3AED"
+backgroundColor = "#0B0F1A"
+secondaryBackgroundColor = "#131A2A"
+textColor = "#E5E7EB"
+font = "sans serif"
 
 [server]
 headless = true
 port = 8501
-
